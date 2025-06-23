@@ -24,9 +24,9 @@ class Enemy
   float goalTargetY = goalTileY * defenses.tileSize + defenses.tileSize/2;
   
   // Load images
-  PImage bodyImage = loadImage("data/images/enemy.png");
-  PImage bowImage = loadImage("data/images/bow.png");
-  PImage swordImage = loadImage("data/images/sword.png");
+  PImage bodyImage = loadImage("images/enemy.png");
+  PImage bowImage = loadImage("images/bow.png");
+  PImage swordImage = loadImage("images/sword.png");
   
   Enemy(float tempX, float tempY, float tempSpeed, int tempMaxHealth, int tempDamage, int tempCooldown, String tempType, int tempReward, int tempRangeDistance)
   {

@@ -36,6 +36,6 @@ class Tile
   // Load the img from imgName
   void loadImg()
   {
-    img = loadImage("data/tiles/" + imgName + ".png");
+    img = loadImage("tiles/" + imgName + ".png");
   }
 }

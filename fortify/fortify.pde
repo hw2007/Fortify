@@ -147,7 +147,7 @@ void setup()
     }
   }
 
-  dpComic = createFont("data/dpcomic.ttf", 128);
+  dpComic = createFont("dpcomic.ttf", 128);
   textFont(dpComic);
 
   resetGame(); // Set up variables

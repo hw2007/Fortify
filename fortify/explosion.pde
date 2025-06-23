@@ -21,7 +21,7 @@ class Explosion
     // Load frames
     for (int i = 0; i < frames.length; i++)
     {
-      frames[i] = loadImage("data/images/" + frameNames[i] + ".png");
+      frames[i] = loadImage("images/" + frameNames[i] + ".png");
     }
   }
   

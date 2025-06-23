@@ -12,7 +12,7 @@ class Projectile
   
   boolean alive = true;
   
-  PImage img = loadImage("data/images/arrow.png"); // Arrow image
+  PImage img = loadImage("images/arrow.png"); // Arrow image
   
   Projectile(float tempX, float tempY, float velocity, float targetX, float targetY, int tempOwner, int tempDamage, float tempOwnerX, float tempOwnerY)
   {
