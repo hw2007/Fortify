@@ -132,7 +132,7 @@ class Enemy
       }
       else if (type == "archer") // Shoot projectile
       {
-        bowSounds[(int) random(bowSounds.length)].play();
+        restartAudio(bowSounds[(int) random(bowSounds.length)]);
         spawnProjectile(new Projectile(x, y, 20, targetX, targetY, 0, damage, x, y));
         
         // If the archer is stuck against a tile that it cannot hit with arrows (a short wall), deal one damage to the wall to avoid being perminantly stuck
@@ -180,7 +180,7 @@ class Enemy
   
   void applyDamage(int damageToApply, float attackerX, float attackerY)
   {
-    hurtSounds[(int) random(hurtSounds.length)].play();
+    restartAudio(hurtSounds[(int) random(hurtSounds.length)]);
     
     health -= damageToApply;
     if (health <= 0)

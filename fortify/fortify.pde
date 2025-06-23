@@ -1,7 +1,14 @@
 // Braden Schneider
 // CS30 Final Project - "Fortify"
 
-import processing.sound.*;
+import ddf.minim.*;
+Minim minim;
+
+// Game version
+final String VERSION = "v1.2";
+
+// Get user OS
+String OS = System.getProperty("os.name").toLowerCase();
 
 // Enables some debug features for use in development
 boolean debug = false;
@@ -59,24 +66,49 @@ BasicButton restartButton; // Button to restart after losing
 BasicButton hideHowToPlayButton; // Button to hide how to play screen
 BasicButton showHowToPlayButton; // Button to show how to play screen again
 
+// Tooltip attributes. Tooltip is used for showing extra info on defenseButton hover.
+float toolTipX = -999;
+float toolTipY = -999;
+float toolTipW = 0;
+float toolTipH = 0;
+String toolTipInfo = "Hello, World!\nFoo\nBar";
+
 PFont dpComic; // The dpComic font
 
 boolean isUIHovered = false; // Keeps track of if any UI elements are hovered, used to make sure that clicking UI will not place a defense
 
 // Sounds!
-SoundFile explosionSound;
-SoundFile[] punchSounds = new SoundFile[5]; // Used when enemies damage defenses
-SoundFile[] hurtSounds = new SoundFile[5];
-SoundFile[] bowSounds = new SoundFile[3];
-SoundFile buildMusic; // Background music for build phase
-SoundFile fightMusic; // Background music for fight phase
+AudioPlayer explosionSound;
+AudioPlayer[] punchSounds = new AudioPlayer[5]; // Used when enemies damage defenses
+AudioPlayer[] hurtSounds = new AudioPlayer[5];
+AudioPlayer[] bowSounds = new AudioPlayer[3];
+AudioPlayer buildMusic; // Background music for build phase
+AudioPlayer fightMusic; // Background music for fight phase
 
 // UI Colors
-final color uiBackground = color(255, 196);
+
+final color uiBackground = color(255, 160);
 final color uiOutline = color(255);
 final color uiHover = color(255);
 final color uiHighlight = color(148, 128, 97);
+final color uiTextColor = color(0);
+final color uiSubtleTextColor = color(96);
+final color uiSecondaryBackground = color(0, 160);
+final color uiSecondaryOutline = color(0);
+final color uiSecondaryTextColor = color(255);
 
+// EXPERIMENTAL/UNFINISHED DARK THEME
+/*
+final color uiBackground = color(32, 160);
+final color uiOutline = color(32);
+final color uiHover = color(32);
+final color uiHighlight = color(148, 128, 97);
+final color uiTextColor = color(255);
+final color uiSubtleTextColor = color(160);
+final color uiSecondaryBackground = color(128, 196);
+final color uiSecondaryOutline = color(128);
+final color uiSecondaryTextColor = color(255);
+*/
 // All of these variables are given values in the resetGame() function!
 
 TileMap defenses; // Tile map where the placed defenses are stored
@@ -131,10 +163,28 @@ boolean showHowToPlay; // Show the 'how to play' dialogue?
 
 void setup()
 {
-  fullScreen();
+  println("Operating system is: \"" + OS + "\"");
+
+  size(960, 540);
+  surface.setResizable(true);
+  surface.setTitle("Fortify (" + VERSION + ")");
   frameRate(60); // Lock frame rate in case the user has a high fps display
-  pixelDensity(displayDensity()); // Make the game not blurry on high-dpi displays
+  pixelDensity(1);
   noSmooth(); // Makes upscaled images (ie pixel art) not blurry
+
+  PImage appIcon = loadImage("app_icon.png");
+  PImage appIconPadded = loadImage("app_icon_padded.png");
+
+  // Set app icon
+  if (OS.contains("mac"))
+  {
+    print("Using padded icon\n");
+    surface.setIcon(appIconPadded);
+  }
+  else
+  {
+    surface.setIcon(appIcon);
+  }
 
   // Load the images for all tiles
   for (int i = 0; i < tileDefinitions.length; i++)
@@ -143,38 +193,43 @@ void setup()
 
     if (i > 0)
     {
-      defenseButtons[i - 1] = new DefenseButton(i, 20 + (i - 1) * 150, height - 245);
+      defenseButtons[i - 1] = new DefenseButton(i, 20 + (i - 1) * 150, height - 204);
     }
   }
 
-  dpComic = createFont("dpcomic.ttf", 128);
+  dpComic = createFont("dpcomic.ttf", 128, false);
   textFont(dpComic);
 
   resetGame(); // Set up variables
 
   // Set up some buttons
-  waveStartButton = new BasicButton(width - 500, height - 100, 480, 64, "Start Wave 1 >>");
-  restartButton = new BasicButton(width/2 - 250, height/2 + 125, 500, 64, "Try Again");
-  hideHowToPlayButton = new BasicButton(width/2 - 250, height/2 + 280, 500, 64, "Hide Tutorial");
-  showHowToPlayButton = new BasicButton(width - 596, height - 100, 80, 64, "?");
+  waveStartButton = new BasicButton(20, 20, 480, 64, "Start Wave 1 >>", 1, 1);
+  restartButton = new BasicButton(0, 125, 500, 64, "Try Again", 2, 2);
+  hideHowToPlayButton = new BasicButton(0, 280, 500, 64, "Hide Tutorial", 2, 2);
+  showHowToPlayButton = new BasicButton(20, 124, 80, 64, "?", 1, 1);
 
   // Load sounds
-  explosionSound = new SoundFile(this, "sounds/explosion.wav");
+  minim = new Minim(this);
+
+  explosionSound = minim.loadFile("sounds/explosion.wav");
   for (int i = 0; i < punchSounds.length; i++)
   {
-    punchSounds[i] = new SoundFile(this, "sounds/punch" + i + ".ogg");
+    punchSounds[i] = minim.loadFile("sounds/punch" + i + ".wav");
   }
   for (int i = 0; i < hurtSounds.length; i++)
   {
-    hurtSounds[i] = new SoundFile(this, "sounds/hurt" + i + ".ogg");
+    hurtSounds[i] = minim.loadFile("sounds/hurt" + i + ".wav");
   }
   for (int i = 0; i < bowSounds.length; i++)
   {
-    bowSounds[i] = new SoundFile(this, "sounds/bow" + i + ".ogg");
+    bowSounds[i] = minim.loadFile("sounds/bow" + i + ".wav");
   }
 
-  buildMusic = new SoundFile(this, "sounds/music_build.ogg");
-  fightMusic = new SoundFile(this, "sounds/music_fight.ogg");
+  buildMusic = minim.loadFile("sounds/music_build.wav");
+  fightMusic = minim.loadFile("sounds/music_fight.wav");
+
+  // Makes lines not have rounded endpoints
+  strokeCap(SQUARE);
 }
 
 void draw()
@@ -243,17 +298,17 @@ void draw()
     {
       enemyTypes = (String[]) append(enemyTypes, "archer");
     }
-    if (currentWave % 2 == 0) // Happens every odd wave
+    if (currentWave % 2 == 0) // Happens every even wave
     {
       enemyHealth++;
-      if (killReward < 9)
+      if (killReward < 8)
       {
         killReward += 1;
       }
       meleeDamage++;
       rangeDamage++;
     }
-    if (currentWave % 2 != 0) // Every even wave
+    if (currentWave % 2 != 0) // Every odd wave
     {
       meleeAttackCooldown -= 100;
       rangeAttackCooldown -= 100;
@@ -263,19 +318,20 @@ void draw()
         meleeAttackCooldown = 40;
         rangeAttackCooldown = 40;
       }
-
-      if (enemySpeed < 32)
-      {
-        enemySpeed += 1;
-      }
     }
-
     // Every wave
-    enemySpawn.finishedTime -= 120;
+    enemySpawn.finishedTime -= 125;
 
     if (enemySpawn.finishedTime < 40)
     {
       enemySpawn.finishedTime = 40;
+    }
+
+    enemySpeed += 0.75;
+
+    if (enemySpeed > 10)
+    {
+      enemySpeed = 10;
     }
   }
 
@@ -310,6 +366,22 @@ void draw()
 
     if (tileIndex == -1) // If the hovered tile is empty (can place there)
     {
+      // Draw a small 3x3 grid around the mouse cursor
+      strokeWeight(4);
+      stroke(uiBackground);
+      float x = mouseTileX * defenses.tileSize + defenses.originX - defenses.tileSize;
+      float y = mouseTileY * defenses.tileSize + defenses.originY - 2;
+      line(x, y, x + defenses.tileSize * 3, y);
+      x = mouseTileX * defenses.tileSize + defenses.originX - defenses.tileSize;
+      y = mouseTileY * defenses.tileSize + defenses.originY + defenses.tileSize + 2;
+      line(x, y, x + defenses.tileSize * 3, y);
+      x = mouseTileX * defenses.tileSize + defenses.originX - 2;
+      y = mouseTileY * defenses.tileSize + defenses.originY - defenses.tileSize;
+      line(x, y, x, y + defenses.tileSize * 3);
+      x = mouseTileX * defenses.tileSize + defenses.originX + defenses.tileSize + 2;
+      y = mouseTileY * defenses.tileSize + defenses.originY - defenses.tileSize;
+      line(x, y, x, y + defenses.tileSize * 3);
+
       // Draw a ghost of the tile about to be placed
       tint(255, 128);
       Tile tile = tileDefinitions[selectedTile];
@@ -317,30 +389,15 @@ void draw()
       image(tile.img, mouseTileX * defenses.tileSize + defenses.originX, mouseTileY * defenses.tileSize + defenses.originY + tile.offsetY * (defenses.tileSize / tile.img.width), defenses.tileSize, (float) tile.img.height / tile.img.width * defenses.tileSize);
       tint(255);
 
-      // Draw a small 3x3 grid around the mouse cursor
-      strokeWeight(4);
-      stroke(255, 32);
-      float x = mouseTileX * defenses.tileSize + defenses.originX - defenses.tileSize;
-      float y = mouseTileY * defenses.tileSize + defenses.originY;
-      line(x, y, x + defenses.tileSize * 3, y);
-      x = mouseTileX * defenses.tileSize + defenses.originX - defenses.tileSize;
-      y = mouseTileY * defenses.tileSize + defenses.originY + defenses.tileSize;
-      line(x, y, x + defenses.tileSize * 3, y);
-      x = mouseTileX * defenses.tileSize + defenses.originX;
-      y = mouseTileY * defenses.tileSize + defenses.originY - defenses.tileSize;
-      line(x, y, x, y + defenses.tileSize * 3);
-      x = mouseTileX * defenses.tileSize + defenses.originX + defenses.tileSize;
-      y = mouseTileY * defenses.tileSize + defenses.originY - defenses.tileSize;
-      line(x, y, x, y + defenses.tileSize * 3);
-
       // Warn the player if the tile is too expensive to place
       if (money < tilePrices[selectedTile])
       {
-        textSize(16);
-        textAlign(LEFT);
-        fill(255, 128);
-
-        text("Too expensive!", mouseX + cameraX + 16, mouseY + cameraY + 32);
+        toolTipX = mouseX + 16;
+        toolTipY = mouseY;
+        toolTipW = 140;
+        toolTipH = 24;
+        
+        toolTipInfo = "Too expensive!";
       }
 
       // Draw a ring around the tower's range
@@ -348,7 +405,7 @@ void draw()
       {
         noFill();
         strokeWeight(4);
-        stroke(255, 32);
+        stroke(uiBackground);
         ellipseMode(CENTER);
 
         int range = tileDefinitions[selectedTile].defenseValues[2] * defenses.tileSize * 2;
@@ -361,13 +418,13 @@ void draw()
       {
         if (money >= tilePrices[selectedTile])
         {
-          punchSounds[(int) random(punchSounds.length)].play(); // Punch sound is used for placing tiles
+          restartAudio(punchSounds[(int) random(punchSounds.length)]); // Punch sound is used for placing tiles
 
           defenses.setTile(mouseTileX, mouseTileY, selectedTile);
           money -= tilePrices[selectedTile];
         }
       }
-    } else if (tileIndex > 0) // If the hovered tile isn't empty, and isn't the goal tile (goal tile cannot be removed or repaired)
+    } else if (tileIndex > -1) // If the hovered tile isn't empty
     {
       defenses.highlightTile(mouseTileX, mouseTileY); // Highlight hovered tile in red
 
@@ -375,7 +432,7 @@ void draw()
       {
         noFill();
         strokeWeight(4);
-        stroke(255, 32);
+        stroke(uiBackground);
         ellipseMode(CENTER);
 
         int range = tileDefinitions[tileIndex].defenseValues[2] * defenses.tileSize * 2;
@@ -387,43 +444,58 @@ void draw()
       int maxHealth = tileDefinitions[tileIndex].defenseValues[0]; // Get the tile's max health
       int repairCost = tilePrices[tileIndex] - int((float) health / maxHealth * tilePrices[tileIndex]); // Calculate a repair cost based on how damaged the tile is
 
-      // Remove tiles
-      if (buildAction == 1) // buildAction 1 is removing tiles
+      // Remove/repair the tile. This cannot be done if the hovered tile is the goal tile (index 0).
+      if (tileIndex != 0)
       {
-        int refund = tilePrices[tileIndex] - repairCost; // Calculate refund based on how damaged the tile is
-        money += refund;
-
-        punchSounds[(int) random(punchSounds.length)].play(); // Punch sound for removing tile
-
-        defenses.setTile(mouseTileX, mouseTileY, -1);
-      }
-
-      // Display repair cost if the tile is damaged
-      if (health < maxHealth)
-      {
-        textSize(16);
-        textAlign(LEFT);
-        fill(255, 128);
-
-        if (repairCost <= money) // Can afford the repair
+        // Remove tiles
+        if (buildAction == 1) // buildAction 1 is removing tiles
         {
-          text("Repair cost: " + repairCost + "\nRight click to repair", mouseX + cameraX + 16, mouseY + cameraY + 32);
-        } else // Cannot afford to repair
-        {
-          text("Repair cost: " + repairCost + "\nToo expensive!", mouseX + cameraX + 16, mouseY + cameraY + 32);
+          int refund = tilePrices[tileIndex] - repairCost; // Calculate refund based on how damaged the tile is
+          money += refund;
+
+          restartAudio(punchSounds[(int) random(punchSounds.length)]); // Punch sound for removing tile
+
+          defenses.setTile(mouseTileX, mouseTileY, -1);
         }
 
-        // Repair tiles
-        if (buildAction == 2) // buildAction 2 is repairing tiles
+        // Display repair cost if the tile is damaged
+        if (health < maxHealth)
         {
-          if (money >= repairCost)
+          toolTipX = mouseX + 16;
+          toolTipY = mouseY;
+          toolTipW = 140;
+          toolTipH = 40;
+          
+          if (repairCost <= money) // Can afford the repair
           {
-            punchSounds[(int) random(punchSounds.length)].play(); // Punch sound for repair
+            toolTipInfo = "Repair cost: " + repairCost + "\nRight click to repair";
+          } 
+          else // Cannot afford to repair
+          {
+            toolTipInfo = "Repair cost: " + repairCost + "\nToo expensive!";
+          }
 
-            money -= repairCost;
-            defenses.health[mouseTileX][mouseTileY] = maxHealth;
+          // Repair tiles
+          if (buildAction == 2) // buildAction 2 is repairing tiles
+          {
+            if (money >= repairCost)
+            {
+              restartAudio(punchSounds[(int) random(punchSounds.length)]); // Punch sound for repair
+
+              money -= repairCost;
+              defenses.health[mouseTileX][mouseTileY] = maxHealth;
+            }
           }
         }
+      }
+      else // Display special goal tile tooltip
+      {
+        toolTipX = mouseX + 16;
+        toolTipY = mouseY;
+        toolTipW = 140;
+        toolTipH = 56;
+        
+        toolTipInfo = "This is your castle.\nDefend it at all costs!\nHealth: " + defenses.health[mouseTileX][mouseTileY] + "/" + tileDefinitions[0].defenseValues[0];
       }
     }
   }
@@ -488,6 +560,41 @@ void draw()
     }
   }
 
+  // Reposition certain UI elements
+  // Defense buttons
+  for (int i = 0; i < defenseButtons.length; i++)
+  {
+    defenseButtons[i].x = 20 + i * 150;
+    defenseButtons[i].y = height - 204;
+  }
+  
+  // Get the x position that the defenseButtons end at, so we can check if there is an overlap with waveStartButton
+  DefenseButton endButton = defenseButtons[defenseButtons.length - 1];
+  float defenseButtonsEndX = endButton.x + endButton.W;
+  
+  if (width < defenseButtonsEndX + waveStartButton.w + waveStartButton.relativeX + 20)
+  {
+    // Place waveStartButton on top of the defenseButtons, justified left
+    waveStartButton.xSnap = 0;
+    waveStartButton.relativeY = 40 + endButton.H;
+    
+    // Place showHowToPlayButton to the right of waveStartButton
+    showHowToPlayButton.xSnap = 0;
+    showHowToPlayButton.relativeX = waveStartButton.relativeX + waveStartButton.w + 20;
+    showHowToPlayButton.relativeY = waveStartButton.relativeY;
+  }
+  else
+  {
+    // Place waveStartButton beside the defenseButtons, justified right
+    waveStartButton.xSnap = 1;
+    waveStartButton.relativeY = 20;
+    
+    // Place showHowToPlayButton on top of waveStartButton
+    showHowToPlayButton.xSnap = 1;
+    showHowToPlayButton.relativeX = 20;
+    showHowToPlayButton.relativeY = 124;
+  }
+
   // Draw UI
   isUIHovered = false;
 
@@ -514,7 +621,7 @@ void draw()
 
     textSize(32);
     textAlign(RIGHT);
-    fill(255);
+    fill(uiSecondaryTextColor);
     text(totalEnemies + " enemies will attack next wave!", width - 20, 40);
 
     if (currentWave == 4)
@@ -537,28 +644,28 @@ void draw()
 
     textSize(32);
     textAlign(RIGHT);
-    fill(0);
-    text("Wave Progress: " + int((float) amountOfEnemiesSpawned / totalEnemies * 100) + "%", width - 28, 54);
+    fill(uiTextColor);
+    text("Wave " + currentWave + " Progress: " + int((float) amountOfEnemiesSpawned / totalEnemies * 100) + "%", width - 28, 54);
   }
 
   textSize(64);
   textAlign(LEFT);
-  fill(255);
+  fill(uiSecondaryTextColor);
   text("$" + money, 20, 64);
 
   // Draw lose screen (if game is lost)
   if (lose)
   {
     strokeWeight(4);
-    stroke(0);
-    fill(0, 128);
+    stroke(uiSecondaryOutline);
+    fill(uiSecondaryBackground);
     rectMode(CENTER);
 
     rect(width/2, height/2, 800, 500);
 
     textSize(64);
     textAlign(CENTER);
-    fill(255);
+    fill(uiSecondaryTextColor);
     text("Game Over!", width/2, height/2 - 150);
 
     textSize(32);
@@ -572,15 +679,15 @@ void draw()
   if (showHowToPlay)
   {
     strokeWeight(4);
-    stroke(0);
-    fill(0, 128);
+    stroke(uiSecondaryOutline);
+    fill(uiSecondaryBackground);
     rectMode(CENTER);
 
     rect(width/2, height/2, 1200, 800);
 
     textSize(64);
     textAlign(CENTER);
-    fill(255);
+    fill(uiSecondaryTextColor);
     text("Welcome to Fortify!", width/2, height/2 - 300);
 
     textSize(32);
@@ -593,13 +700,38 @@ void draw()
       "- Ranged enemies will not spawn on the first few waves, so don't worry about protecting\nagainst projectiles yet.\n" +
       "- If a defense gets damaged during a wave, you can right click on it to repair it after the\nwave ends.\n" +
       "- If your defense begins to exceed the screen space, you can use WASD to move the camera,\nand space to recenter.\n" +
-      "- You can see useful info in the top-left and top-right corners of your screen.\n",
+      "- You can see useful info in the top-left and top-right corners of your screen.\n" +
+      "- Press the ? button to open this window back up anytime.",
       width/2 - 580, height/2 - 230);
 
     hideHowToPlayButton.checkForHover();
     hideHowToPlayButton.display();
   }
 
+  // Draw tooltip
+  strokeWeight(4);
+  stroke(uiSecondaryOutline);
+  fill(uiSecondaryBackground);
+  rectMode(CORNER);
+  if (toolTipY + toolTipH > height)
+  {
+    toolTipY = height - toolTipH;
+  }
+  if (toolTipX + toolTipW > width)
+  {
+    toolTipX = width - toolTipW;
+  }
+  rect(toolTipX, toolTipY, toolTipW, toolTipH);
+  
+  textAlign(LEFT);
+  textSize(16);
+  fill(uiSecondaryTextColor);
+  text(toolTipInfo, toolTipX + 8, toolTipY + 16);
+  
+  // Reset tooltip position
+  toolTipX = -999;
+  toolTipY = -999;
+  
   // Draw debug menu
   if (debug)
   {
@@ -672,7 +804,7 @@ void resetGame()
   meleeAttackCooldown = 1000;
   rangeAttackCooldown = 1000;
   killReward = 3;
-  enemySpawn = new Timer(1500);
+  enemySpawn = new Timer(1200);
 
   selectedTile = 1;
 
@@ -795,7 +927,7 @@ void drawHealthBar(float x, float y, int w, int h, int maxHealth, int currentHea
 {
   rectMode(CENTER);
   noStroke();
-  fill(0);
+  fill(uiSecondaryBackground);
   rect(x, y, w + 4, h);
 
   rectMode(CORNER);
@@ -809,18 +941,26 @@ void keyPressed()
   {
     cameraX = defenses.w * defenses.tileSize / 2 - width/2 + defenses.tileSize/2;
     cameraY = defenses.h * defenses.tileSize / 2 - height/2 + defenses.tileSize/2;
-  } else if (key == 'w')
+  } 
+  else if (key == 'w')
   {
     wasd[0] = true;
-  } else if (key == 'a')
+  } 
+  else if (key == 'a')
   {
     wasd[1] = true;
-  } else if (key == 's')
+  } 
+  else if (key == 's')
   {
     wasd[2] = true;
-  } else if (key == 'd')
+  } 
+  else if (key == 'd')
   {
     wasd[3] = true;
+  }
+  else if (keyCode == 114) // F3 key
+  {
+    debug = !debug;
   }
 }
 
@@ -829,14 +969,23 @@ void keyReleased()
   if (key == 'w')
   {
     wasd[0] = false;
-  } else if (key == 'a')
+  } 
+  else if (key == 'a')
   {
     wasd[1] = false;
-  } else if (key == 's')
+  } 
+  else if (key == 's')
   {
     wasd[2] = false;
-  } else if (key == 'd')
+  } 
+  else if (key == 'd')
   {
     wasd[3] = false;
   }
+}
+
+void restartAudio(AudioPlayer audio)
+{
+  audio.rewind();
+  audio.play();
 }

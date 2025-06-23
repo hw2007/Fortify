@@ -8,7 +8,7 @@ class DefenseButton
   
   // Hard-coded dimensions for all DefenseButtons
   final int W = 150;
-  final int H = 225;
+  final int H = 184;
   
   boolean hovered = false;
   
@@ -23,7 +23,7 @@ class DefenseButton
   
   void checkForHover()
   {
-    hovered = (mouseX > x && mouseX < x + W && mouseY > y && mouseY < y + H);
+    hovered = (mouseX > x - 1 && mouseX < x + W && mouseY > y && mouseY < y + H);
     if (hovered)
     {
       isUIHovered = true; // When this is true, clicking won't place a tile and instead will activate a button
@@ -59,37 +59,48 @@ class DefenseButton
     }
     
     
-    imageMode(CORNER);
+    imageMode(CENTER);
     float imgHeight = (float) tile.img.height / tile.img.width * 48;
-    image(tile.img, x + W/2 - 24, y + 8, 48, imgHeight);
+    image(tile.img, x + W/2, y + H/2, 48, imgHeight);
     
-    float textX = x + 8;
-    float textY = y + imgHeight + 24;
-    fill(0);
+    fill(uiTextColor);
     textSize(16);
+    textAlign(CENTER);
+    text(tileNames[tileIndex], x + W/2, y + 24);
+    
+    fill(uiSubtleTextColor);
+    textAlign(RIGHT);
+    text("$" + tilePrices[tileIndex], x + W - 14, y + H - 14);
+    
     textAlign(LEFT);
-    text(tileNames[tileIndex], textX, textY);
+    text(tile.defenseValues[0] + " HP", x + 14, y + H - 14);
     
-    String info = "";
-    if (tile.type == "static")
+    // Draw the tooltip
+    if (hovered)
     {
-      info = "- Blocks enemies &\nprojectiles";
+      toolTipX = mouseX + 16;
+      toolTipY = mouseY;
+      toolTipW = W;
+      
+      int lineCount = 0; // Amount of lines of text in the tooltip
+      
+      if (tile.type == "static")
+      {
+        toolTipInfo = "- Blocks enemies &\nprojectiles.";
+        lineCount = 2;
+      }
+      else if (tile.type == "static_ignores_projectiles")
+      {
+        toolTipInfo = "- Blocks enemies only.\n- Projectiles will fly\nover this wall.";
+        lineCount = 3;
+      }
+      else if (tile.type == "turret")
+      {
+        toolTipInfo = "- Shoots at enemies.\n- Damage: " + tile.defenseValues[1] + " HP\n- Range: " + tile.defenseValues[2] + " tiles\n- Firerate: " + (int) (((float) 1000/tile.defenseValues[3]) * 60) + "/min";
+        lineCount = 4;
+      }
+      
+      toolTipH = lineCount * 16 + 8;
     }
-    else if (tile.type == "static_ignores_projectiles")
-    {
-      info = "- Blocks enemies\n- Projectiles fly over\nthis defense";
-    }
-    else if (tile.type == "turret")
-    {
-      info = "- Shoots at enemies\n- Deals " + tile.defenseValues[1] + " damage";
-    }
-    
-    info = info + "\n- Has " + tile.defenseValues[0] + " health";
-    
-    fill(96);
-    text(info, textX, textY + 16);
-    
-    fill(0);
-    text("$" + tilePrices[tileIndex], textX, y + H - 8);
   }
 }

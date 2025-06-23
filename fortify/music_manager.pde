@@ -11,12 +11,14 @@ class MusicManager
       if (waveState == 0) // Build mode
       {
         buildMusic.loop();
-        fightMusic.stop();
+        fightMusic.rewind();
+        fightMusic.pause();
       }
       else if (waveState == 1) // Fight mode
       {
         fightMusic.loop();
-        buildMusic.stop();
+        buildMusic.rewind();
+        buildMusic.pause();
       }
       
       prevWaveState = waveState;

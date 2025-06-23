@@ -38,8 +38,6 @@ class TileMap
   void display()
   {
     imageMode(CORNER);
-    fill(255);
-    textSize(16);
     
     // Draw all the tile images
     for (int y = 0; y < h; y++)
@@ -58,10 +56,32 @@ class TileMap
             tint(#FF8E8E);
           }
           
-          image(tile.img, x * tileSize + originX, y * tileSize + originY + tile.offsetY * (tileSize / tile.img.width), tileSize, (float) tile.img.height / tile.img.width * tileSize);
+          float newX = x * tileSize + originX;
+          float newY = y * tileSize + originY + tile.offsetY * (tileSize / tile.img.width);
+          float imgHeight = (float) tile.img.height / tile.img.width * tileSize;
+          image(tile.img, newX, newY, tileSize, imgHeight);
+          
           tint(255);
         }
       }
+    }
+    
+    // Draw highlight outline
+    int highlightedIndex = getTile(highlightedX, highlightedY);
+    if (highlightedX > -1 && highlightedY > -1 && highlightedIndex > -1)
+    {
+      Tile tile = tileDefinitions[highlightedIndex];
+      
+      float x = highlightedX * tileSize + originX;
+      float y = highlightedY * tileSize + originY + tile.offsetY * (tileSize / tile.img.width);
+      float h = (float) tile.img.height / tile.img.width * tileSize;
+      
+      strokeWeight(4);
+      stroke(uiBackground);
+      noFill();
+      rectMode(CORNER);
+      
+      rect(x - 2, y - 2, tileSize + 4, h + 4);
     }
     
     // Draw health bars
@@ -140,7 +160,7 @@ class TileMap
             if (shortestDistance < tile.defenseValues[2] * tileSize && nearestEnemyIndex != -1 && (frameCount + x * y) % ((float) tile.defenseValues[3]/1000 * 60) == 0)
             {
               // Play bow sound
-              bowSounds[(int) random(bowSounds.length)].play();
+              restartAudio(bowSounds[(int) random(bowSounds.length)]);
               // Spawn the projectile
               Enemy targetEnemy = enemies[nearestEnemyIndex];
               spawnProjectile(new Projectile(x * tileSize + originX + tileSize/2, y * tileSize + originY + tileSize/2, 20, targetEnemy.x, targetEnemy.y, 1, damage, x * tileSize + originX + tileSize/2, y * tileSize + originY + tileSize/2));
@@ -183,12 +203,12 @@ class TileMap
   
   void damageTile(int x, int y, int damage)
   {
-    if (getTile(x, y) == -1) // Empty tiles don't get damaged
+    if (getTile(x, y) < 0) // Avoid empty tiles & tiles that are out-of-bounds
     {
       return;
     }
     
-    punchSounds[(int) random(punchSounds.length)].play();
+    restartAudio(punchSounds[(int) random(punchSounds.length)]);;
     
     health[x][y] -= damage; // Damage the tile
     
@@ -207,7 +227,7 @@ class TileMap
       }
       
       // Explosion sound
-      explosionSound.play();
+      restartAudio(explosionSound);
     }
   }
   
